@@ -1,5 +1,6 @@
 __pycache__/
-dataset/Resized_Images/
+dataset/Resized_Images/train2014/
+dataset/Resized_Images/val2014/
 dataset/*.npy
 models_saved/
 *.pyc
