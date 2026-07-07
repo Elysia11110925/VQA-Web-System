@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>VQA · 视觉问答</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f1a;
+            min-height: 100vh;
+            display: flex; justify-content: center; align-items: flex-start;
+            padding: 30px 20px;
+        }
+        .container {
+            background: #1a1a2e; border-radius: 20px;
+            box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+            padding: 36px 40px; max-width: 800px; width: 100%;
+        }
+        h1 { font-size: 26px; color: #e8e8f0; margin-bottom: 2px; }
+        .subtitle { color: #777; font-size: 13px; margin-bottom: 8px; }
+        .header-badge {
+            display: inline-block; font-size: 10px; font-weight: 600;
+            padding: 3px 10px; border-radius: 12px; margin-bottom: 16px;
+            background: rgba(249,115,22,0.15); color: #fb923c; letter-spacing: .3px;
+        }
+
+        /* Upload area */
+        .upload-area {
+            border: 2px dashed #2d2d4a; border-radius: 12px;
+            padding: 30px; text-align: center; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 20px; position: relative;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #f97316; background: rgba(249,115,22,0.05);
+        }
+        .upload-area.has-image { padding: 10px; border-style: solid; border-color: #f97316; }
+        .upload-area img { max-width: 100%; max-height: 280px; border-radius: 8px; }
+        .upload-placeholder { color: #555; font-size: 14px; }
+        .upload-placeholder .icon { font-size: 40px; display: block; margin-bottom: 8px; }
+        #file-input { display: none; }
+
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; color: #a0a0b8; margin-bottom: 5px; font-size: 13px; }
+        input[type="text"] {
+            width: 100%; padding: 11px 14px;
+            border: 2px solid #2d2d4a; border-radius: 10px;
+            font-size: 14px; font-family: inherit;
+            transition: border-color 0.2s;
+            background: #16162b; color: #d0d0e0;
+        }
+        input:focus { outline: none; border-color: #f97316; background: #1e1e38; }
+        input::placeholder { color: #555; }
+
+        .btn-row { display: flex; gap: 10px; }
+        .btn {
+            flex: 1; padding: 12px 16px; border: none; border-radius: 10px;
+            font-size: 14px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+        }
+        .btn-primary { background: #f97316; color: white; }
+        .btn-primary:hover { box-shadow: 0 4px 20px rgba(249,115,22,0.3); }
+        .btn:hover { transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .hint { font-size: 11px; color: #555; text-align: center; margin-top: 6px; }
+
+        /* Result */
+        .result {
+            margin-top: 20px; padding: 18px 20px; border-radius: 14px;
+            background: rgba(249,115,22,0.08); border: 2px solid #f97316;
+            display: none;
+        }
+        .result.show { display: block; }
+        .top-answer { font-size: 28px; font-weight: 700; color: #fb923c; margin-bottom: 4px; }
+        .top-prob { font-size: 14px; color: #888; margin-bottom: 14px; }
+        .pred-list { list-style: none; }
+        .pred-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; border-radius: 6px; margin-bottom: 4px;
+            background: rgba(255,255,255,0.03);
+        }
+        .pred-ans { font-weight: 600; font-size: 13px; color: #d0d0e0; min-width: 90px; }
+        .pred-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin: 0 12px; overflow: hidden; }
+        .pred-bar-fill { height: 100%; border-radius: 3px; background: #f97316; transition: width 0.5s ease; }
+        .pred-prob { font-size: 12px; color: #666; min-width: 50px; text-align: right; }
+
+        .loading { text-align: center; margin: 20px 0; display: none; }
+        .loading.show { display: block; }
+        .spinner {
+            width: 32px; height: 32px; border: 3px solid #2d2d4a;
+            border-top: 3px solid #f97316; border-radius: 50%;
+            animation: spin 0.7s linear infinite; margin: 0 auto 6px;
+        }
+        .loading p { color: #777 !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error { margin-top: 18px; padding: 14px; background: rgba(239,68,68,0.1); border: 2px solid #ef4444; border-radius: 10px; color: #f87171; display: none; font-size: 13px; }
+        .error.show { display: block; }
+
+        @media (max-width: 640px) {
+            .container { padding: 24px 20px; border-radius: 14px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>VQA · 视觉问答</h1>
+    <p class="subtitle">Visual Question Answering — 上传图片，输入英文问题，AI 看图回答</p>
+    <span class="header-badge">Multimodal · ViLT · Deep Learning</span>
+
+    <!-- Upload -->
+    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" accept="image/*" onchange="handleFile(event)">
+        <div class="upload-placeholder" id="upload-placeholder">
+            <span class="icon">🖼</span>
+            <span>点击上传图片 或 拖拽到此处</span>
+        </div>
+        <img id="preview" style="display:none;">
+    </div>
+
+    <div class="form-group">
+        <label for="question">输入问题（英文）</label>
+        <input type="text" id="question" placeholder="例: What does the sign say?">
+    </div>
+
+    <div class="btn-row">
+        <button class="btn btn-primary" id="submit-btn" onclick="analyze()">🔍 提问</button>
+    </div>
+    <p class="hint">Ctrl+Enter 提交</p>
+
+    <div class="loading" id="loading"><div class="spinner"></div><p>AI 正在看图...</p></div>
+    <div class="error" id="error"></div>
+
+    <!-- Result -->
+    <div class="result" id="result">
+        <div class="top-answer" id="top-answer"></div>
+        <div class="top-prob" id="top-prob"></div>
+        <ul class="pred-list" id="pred-list"></ul>
+    </div>
+
+    <!-- Footer -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:14px;border-top:1px solid #2d2d4a;font-size:11px;color:#555;">
+        <span>🖥 Device: <strong>GPU</strong></span>
+        <span>🤖 Model: ViLT (VQA v2)</span>
+    </div>
+</div>
+
+<script>
+const uploadArea = document.getElementById('upload-area');
+const preview = document.getElementById('preview');
+const placeholder = document.getElementById('upload-placeholder');
+let selectedFile = null;
+
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+    e.preventDefault(); uploadArea.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile({target: {files: e.dataTransfer.files}});
+});
+
+function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        preview.src = ev.target.result;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        uploadArea.classList.add('has-image');
+    };
+    reader.readAsDataURL(file);
+}
+
+async function analyze() {
+    if (!selectedFile) { showError('请先上传一张图片'); return; }
+    const question = document.getElementById('question').value.trim();
+    if (!question) { showError('请输入问题'); return; }
+
+    document.getElementById('result').className = 'result';
+    document.getElementById('error').className = 'error';
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    formData.append('question', question);
+
+    try {
+        const resp = await fetch('/api/predict', { method: 'POST', body: formData });
+        const data = await resp.json();
+        setLoading(false);
+        if (data.error) { showError(data.error); return; }
+
+        document.getElementById('result').classList.add('show');
+        document.getElementById('top-answer').textContent = data.top_answer;
+        document.getElementById('top-prob').textContent = '置信度: ' + (data.top_probability * 100).toFixed(1) + '%';
+
+        let html = '';
+        for (const pred of data.predictions) {
+            const pct = (pred.probability * 100).toFixed(1);
+            html += `<li class="pred-item">
+                <span class="pred-ans">${pred.answer}</span>
+                <div class="pred-bar-track"><div class="pred-bar-fill" style="width:${pct}%"></div></div>
+                <span class="pred-prob">${pct}%</span>
+            </li>`;
+        }
+        document.getElementById('pred-list').innerHTML = html;
+    } catch (err) {
+        setLoading(false);
+        showError('网络错误: ' + err.message);
+    }
+}
+
+function setLoading(on) {
+    document.getElementById('loading').className = on ? 'loading show' : 'loading';
+    document.getElementById('submit-btn').disabled = on;
+}
+
+function showError(msg) {
+    const el = document.getElementById('error');
+    el.textContent = '❌ ' + msg;
+    el.classList.add('show');
+}
+
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); analyze(); }
+});
+</script>
+</body>
+</html>

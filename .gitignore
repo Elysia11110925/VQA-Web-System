@@ -1,0 +1,8 @@
+__pycache__/
+dataset/Resized_Images/
+dataset/*.npy
+models_saved/
+*.pyc
+.DS_Store
+Thumbs.db
+desktop.ini
