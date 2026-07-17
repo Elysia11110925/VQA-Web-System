@@ -22,9 +22,9 @@ from models import SANModel
 from utils.text_helper import VocabDict, load_str_list, tokenize
 
 DATASET = os.path.join(BASE, 'dataset')
-MODEL_PATH = os.path.join(BASE, 'models_saved', 'best_model.pt')
-QST_VOCAB_PATH = os.path.join(DATASET, 'vocab_questions.txt')
-ANS_VOCAB_PATH = os.path.join(DATASET, 'vocab_answers.txt')
+MODEL_PATH = os.path.join(BASE, 'models', 'full_model.pt')
+QST_VOCAB_PATH = os.path.join(DATASET, 'vocab_questions2.txt')
+ANS_VOCAB_PATH = os.path.join(DATASET, 'vocab_answers2.txt')
 MAX_QST_LENGTH = 30
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
